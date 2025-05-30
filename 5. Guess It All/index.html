@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guess It All</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Arial', sans-serif;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #ff6f61, #ffd54f);
+      overflow: hidden;
+    }
+
+    .game-container {
+      text-align: center;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+      max-width: 600px;
+      width: 90%;
+      position: relative;
+      border: 3px solid #e91e63;
+    }
+
+    h1 {
+      color: #d81b60;
+      font-size: 2.5em;
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+
+    #question {
+      font-size: 3em;
+      color: #311b92;
+      margin-bottom: 20px;
+      background: #ede7f6;
+      padding: 10px;
+      border-radius: 10px;
+      border: 2px solid #311b92;
+      display: inline-block;
+    }
+
+    #game-board {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .item-tile {
+      width: 90px;
+      height: 70px;
+      background: #26a69a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1em;
+      color: #fff;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.2s ease-out;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      text-transform: capitalize;
+      font-weight: bold;
+    }
+
+    .item-tile:hover {
+      transform: scale(1.05);
+      background: #4db6ac;
+    }
+
+    .correct {
+      background: #4caf50 !important;
+    }
+
+    .incorrect {
+      animation: shake 0.2s ease;
+      background: #f44336 !important;
+    }
+
+    @keyframes shake {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-4px); }
+      50% { transform: translateX(4px); }
+      75% { transform: translateX(-4px); }
+      100% { transform: translateX(0); }
+    }
+
+    #score, #timer {
+      font-size: 1.4em;
+      color: #d81b60;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+
+    #start-button, #restart-button {
+      padding: 10px 25px;
+      font-size: 1.2em;
+      background: #f06292;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    #start-button:hover, #restart-button:hover {
+      background: #ec407a;
+    }
+
+    #restart-button {
+      display: none;
+    }
+
+    .alert {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #f44336;
+      color: white;
+      padding: 10px 25px;
+      border-radius: 10px;
+      font-size: 1.1em;
+      font-weight: bold;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      opacity: 0;
+      animation: popIn 0.2s ease forwards, popOut 0.2s ease 0.5s forwards;
+      pointer-events: none;
+    }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+      to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+
+    @keyframes popOut {
+      from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      to { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <h1>Guess It All</h1>
+    <div id="question">?</div>
+    <div id="score">Score: 0</div>
+    <div id="timer">Time: 30</div>
+    <div id="game-board"></div>
+    <button id="start-button">Start Game</button>
+    <button id="restart-button">Play Again</button>
+  </div>
+
+  <script>
+    const gameBoard = document.getElementById('game-board');
+    const question = document.getElementById('question');
+    const scoreDisplay = document.getElementById('score');
+    const timerDisplay = document.getElementById('timer');
+    const startButton = document.getElementById('start-button');
+    const restartButton = document.getElementById('restart-button');
+
+    let score = 0;
+    let timeLeft = 30;
+    let gameActive = false;
+    let timer;
+    let correctItem;
+    let items = [];
+
+    const itemData = [
+      { name: 'apple', emoji: '🍎' },
+      { name: 'banana', emoji: '🍌' },
+      { name: 'car', emoji: '🚗' },
+      { name: 'bicycle', emoji: '🚲' },
+      { name: 'book', emoji: '📚' },
+      { name: 'pencil', emoji: '✏️' },
+      { name: 'sun', emoji: '☀️' },
+      { name: 'moon', emoji: '🌙' },
+      { name: 'tree', emoji: '🌳' },
+      { name: 'house', emoji: '🏠' },
+      { name: 'dog', emoji: '🐶' },
+      { name: 'cat', emoji: '🐱' },
+      { name: 'ball', emoji: '⚽' },
+      { name: 'cake', emoji: '🎂' },
+      { name: 'ice cream', emoji: '🍦' }
+    ];
+
+    function generateQuestion() {
+      const randomIndex = Math.floor(Math.random() * itemData.length);
+      correctItem = itemData[randomIndex].name;
+      question.textContent = itemData[randomIndex].emoji;
+      return correctItem;
+    }
+
+    function generateOptions(correct) {
+      items = [correct];
+      while (items.length < 12) {
+        const randomItem = itemData[Math.floor(Math.random() * itemData.length)].name;
+        if (!items.includes(randomItem)) items.push(randomItem);
+      }
+      items.sort(() => Math.random() - 0.5);
+    }
+
+    function createBoard() {
+      gameBoard.innerHTML = '';
+      const correct = generateQuestion();
+      generateOptions(correct);
+
+      for (let i = 0; i < 12; i++) {
+        const tile = document.createElement('div');
+        tile.classList.add('item-tile');
+        tile.textContent = items[i];
+        tile.addEventListener('click', () => handleTileClick(tile, items[i]));
+        gameBoard.appendChild(tile);
+      }
+    }
+
+    function showAlert(message) {
+      const alert = document.createElement('div');
+      alert.classList.add('alert');
+      alert.textContent = message;
+      document.querySelector('.game-container').appendChild(alert);
+      setTimeout(() => alert.remove(), 700);
+    }
+
+    function handleTileClick(tile, item) {
+      if (!gameActive) return;
+
+      if (item === correctItem) {
+        score += 10;
+        tile.classList.add('correct');
+        scoreDisplay.textContent = `Score: ${score}`;
+        setTimeout(() => {
+          tile.classList.remove('correct');
+          createBoard();
+        }, 200);
+      } else {
+        tile.classList.add('incorrect');
+        showAlert('Wrong Item!');
+        setTimeout(() => tile.classList.remove('incorrect'), 200);
+      }
+    }
+
+    function startTimer() {
+      timer = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = `Time: ${timeLeft}`;
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          gameActive = false;
+          gameBoard.innerHTML = '<p>Game Over!</p>';
+          startButton.style.display = 'none';
+          restartButton.style.display = 'block';
+        }
+      }, 1000);
+    }
+
+    startButton.addEventListener('click', () => {
+      gameActive = true;
+      score = 0;
+      timeLeft = 30;
+      scoreDisplay.textContent = `Score: ${score}`;
+      timerDisplay.textContent = `Time: ${timeLeft}`;
+      startButton.style.display = 'none';
+      createBoard();
+      startTimer();
+    });
+
+    restartButton.addEventListener('click', () => {
+      gameActive = true;
+      score = 0;
+      timeLeft = 30;
+      scoreDisplay.textContent = `Score: ${score}`;
+      timerDisplay.textContent = `Time: ${timeLeft}`;
+      restartButton.style.display = 'none';
+      startButton.style.display = 'block';
+      createBoard();
+      startTimer();
+    });
+  </script>
+</body>
+</html>

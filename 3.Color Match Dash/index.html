@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Color Match Dash</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #6b7280, #a855f7);
+      overflow: hidden;
+    }
+
+    .game-container {
+      text-align: center;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+      max-width: 550px;
+      width: 90%;
+      position: relative;
+    }
+
+    h1 {
+      color: #1e3a8a;
+      margin-bottom: 25px;
+      font-size: 2.5em;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    #target-color {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 25px;
+      border-radius: 15px;
+      border: 4px solid #1e3a8a;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    #target-color:hover {
+      transform: scale(1.05);
+    }
+
+    #game-board {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 25px;
+    }
+
+    .tile {
+      width: 90px;
+      height: 90px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.2s, opacity 0.5s;
+      opacity: 0;
+      animation: fadeIn 0.5s forwards;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .tile:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.8); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .correct {
+      animation: correct 0.3s ease;
+    }
+
+    .incorrect {
+      animation: incorrect 0.3s ease;
+    }
+
+    @keyframes correct {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); background-color: #22c55e; }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes incorrect {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      50% { transform: translateX(5px); }
+      75% { transform: translateX(-5px); }
+      100% { transform: translateX(0); }
+    }
+
+    #score, #timer {
+      font-size: 1.3em;
+      color: #1e3a8a;
+      margin: 15px 0;
+      font-weight: 500;
+    }
+
+    #start-button, #restart-button {
+      padding: 12px 30px;
+      font-size: 1.2em;
+      background: linear-gradient(45deg, #3b82f6, #a855f7);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      margin-top: 15px;
+    }
+
+    #start-button:hover, #restart-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    #restart-button {
+      display: none;
+    }
+
+    .alert {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      background: #ef4444;
+      color: white;
+      padding: 15px 30px;
+      border-radius: 10px;
+      font-size: 1.1em;
+      font-weight: 500;
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+      animation: popIn 0.3s ease forwards, popOut 0.3s ease 0.7s forwards;
+      pointer-events: none;
+    }
+
+    @keyframes popIn {
+      from { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+      to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+
+    @keyframes popOut {
+      from { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+      to { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <h1>Color Match Dash</h1>
+    <div id="target-color"></div>
+    <div id="score">Score: 0</div>
+    <div id="timer">Time: 10</div>
+    <div id="game-board"></div>
+    <button id="start-button">Start Game</button>
+    <button id="restart-button">Restart Game</button>
+  </div>
+
+  <script>
+    const gameBoard = document.getElementById('game-board');
+    const targetColor = document.getElementById('target-color');
+    const scoreDisplay = document.getElementById('score');
+    const timerDisplay = document.getElementById('timer');
+    const startButton = document.getElementById('start-button');
+    const restartButton = document.getElementById('restart-button');
+
+    let score = 0;
+    let timeLeft = 10;
+    let gameActive = false;
+    let timer;
+    let colors = [];
+    let targetColorValue;
+
+    function generateColor() {
+      return `rgb(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)})`;
+    }
+
+    function showAlert(message) {
+      const alert = document.createElement('div');
+      alert.classList.add('alert');
+      alert.textContent = message;
+      document.querySelector('.game-container').appendChild(alert);
+      setTimeout(() => alert.remove(), 1000);
+    }
+
+    function createBoard() {
+      gameBoard.innerHTML = '';
+      colors = Array(16).fill().map(() => generateColor());
+      const correctIndex = Math.floor(Math.random() * 16);
+      targetColorValue = colors[correctIndex];
+
+      for (let i = 0; i < 16; i++) {
+        const tile = document.createElement('div');
+        tile.classList.add('tile');
+        tile.style.backgroundColor = colors[i];
+        tile.addEventListener('click', () => handleTileClick(tile, i));
+        gameBoard.appendChild(tile);
+      }
+
+      targetColor.style.backgroundColor = targetColorValue;
+    }
+
+    function handleTileClick(tile, index) {
+      if (!gameActive) return;
+
+      if (colors[index] === targetColorValue) {
+        score += 10;
+        tile.classList.add('correct');
+        scoreDisplay.textContent = `Score: ${score}`;
+        setTimeout(() => {
+          tile.classList.remove('correct');
+          createBoard();
+        }, 300);
+      } else {
+        tile.classList.add('incorrect');
+        showAlert('Wrong Color!');
+        setTimeout(() => tile.classList.remove('incorrect'), 300);
+      }
+    }
+
+    function startTimer() {
+      timer = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = `Time: ${timeLeft}`;
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          gameActive = false;
+          gameBoard.innerHTML = '<p>Game Over!</p>';
+          startButton.style.display = 'none';
+          restartButton.style.display = 'block';
+        }
+      }, 1000);
+    }
+
+    startButton.addEventListener('click', () => {
+      gameActive = true;
+      score = 0;
+      timeLeft = 10;
+      scoreDisplay.textContent = `Score: ${score}`;
+      timerDisplay.textContent = `Time: ${timeLeft}`;
+      startButton.style.display = 'none';
+      createBoard();
+      startTimer();
+    });
+
+    restartButton.addEventListener('click', () => {
+      gameActive = true;
+      score = 0;
+      timeLeft = 10;
+      scoreDisplay.textContent = `Score: ${score}`;
+      timerDisplay.textContent = `Time: ${timeLeft}`;
+      restartButton.style.display = 'none';
+      startButton.style.display = 'block';
+      createBoard();
+      startTimer();
+    });
+  </script>
+</body>
+</html>

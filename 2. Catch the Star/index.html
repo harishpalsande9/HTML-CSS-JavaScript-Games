@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catch the Star</title>
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 600px;
+            height: 400px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        #game-title {
+            font-size: 32px;
+            color: white;
+            text-shadow: 0 0 10px #ffeb3b;
+            margin: 0;
+        }
+
+        #game-subtitle {
+            font-size: 16px;
+            color: #ffffffcc;
+            text-shadow: 0 0 5px #ffeb3b;
+            margin: 5px 0 10px;
+            text-align: center;
+        }
+
+        #game-header {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0 20px;
+            margin-bottom: 10px;
+        }
+
+        #score, #timer {
+            font-size: 24px;
+            color: white;
+            text-shadow: 0 0 10px #ffeb3b;
+        }
+
+        #game-area {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border: 2px solid #ffffff33;
+            border-radius: 10px;
+        }
+
+        #star {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ffeb3b"><path d="M12 .587l3.668 7.431 8.332 1.151-6 5.847 1.416 8.265L12 18.897l-7.416 4.384 1.416-8.265-6-5.847 8.332-1.151z"/></svg>') center/cover;
+            cursor: pointer;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        #star:hover {
+            transform: scale(1.2);
+            opacity: 0.8;
+        }
+
+        @keyframes glow {
+            0% { box-shadow: 0 0 5px #ffeb3b, 0 0 10px #ffeb3b; }
+            50% { box-shadow: 0 0 20px #ffeb3b, 0 0 30px #ffeb3b; }
+            100% { box-shadow: 0 0 5px #ffeb3b, 0 0 10px #ffeb3b; }
+        }
+
+        #star.caught {
+            animation: glow 0.5s ease-in-out;
+        }
+
+        #start-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 10px 20px;
+            font-size: 18px;
+            background: #ffeb3b;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s ease, transform 0.3s ease;
+        }
+
+        #start-button:hover {
+            background: #ffd700;
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 36px;
+            text-shadow: 0 0 10px #ff0000;
+            display: none;
+            text-align: center;
+        }
+
+        #game-over button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            background: #ffeb3b;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s ease, transform 0.3s ease;
+        }
+
+        #game-over button:hover {
+            background: #ffd700;
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1 id="game-title">Catch the Star</h1>
+        <p id="game-subtitle">Click the star to score points, or click the game area to move it without scoring!</p>
+        <div id="game-header">
+            <div id="score">Score: 0</div>
+            <div id="timer">Time: 10</div>
+        </div>
+        <div id="game-area">
+            <div id="star"></div>
+        </div>
+        <button id="start-button">Start Game</button>
+        <div id="game-over">
+            Game Over!<br>Final Score: <span id="final-score"></span><br>
+            <button id="restart-button">Play Again</button>
+        </div>
+    </div>
+    <script>
+        const star = document.getElementById('star');
+        const scoreDisplay = document.getElementById('score');
+        const timerDisplay = document.getElementById('timer');
+        const gameArea = document.getElementById('game-area');
+        const startButton = document.getElementById('start-button');
+        const gameOverScreen = document.getElementById('game-over');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const restartButton = document.getElementById('restart-button');
+        
+        let score = 0;
+        let gameActive = false;
+        let timeLeft = 10;
+        let timer;
+
+        function moveStar() {
+            if (!gameActive) return;
+            const maxX = gameArea.offsetWidth - star.offsetWidth;
+            const maxY = gameArea.offsetHeight - star.offsetHeight;
+            const newX = Math.random() * maxX;
+            const newY = Math.random() * maxY;
+            star.style.left = `${newX}px`;
+            star.style.top = `${newY}px`;
+        }
+
+        function updateScore() {
+            score++;
+            scoreDisplay.textContent = `Score: ${score}`;
+            star.classList.add('caught');
+            setTimeout(() => star.classList.remove('caught'), 500);
+            moveStar();
+        }
+
+        function startGame() {
+            gameActive = true;
+            score = 0;
+            timeLeft = 10;
+            scoreDisplay.textContent = `Score: ${score}`;
+            timerDisplay.textContent = `Time: ${timeLeft}`;
+            startButton.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            moveStar();
+            timer = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = `Time: ${timeLeft}`;
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(timer);
+            finalScoreDisplay.textContent = score;
+            gameOverScreen.style.display = 'block';
+        }
+
+        star.addEventListener('click', (e) => {
+            if (gameActive) {
+                e.stopPropagation(); // Prevent click from bubbling to game-area
+                updateScore();
+            }
+        });
+
+        gameArea.addEventListener('click', () => {
+            if (gameActive) {
+                moveStar(); // Move star without increasing score
+            }
+        });
+
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', startGame);
+
+        // Initial star position
+        moveStar();
+    </script>
+</body>
+</html>
